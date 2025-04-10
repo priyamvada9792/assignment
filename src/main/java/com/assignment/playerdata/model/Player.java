@@ -21,6 +21,7 @@ public class Player {
     private LocalDate dob;
 
     @ManyToOne
+    @JoinColumn(name = "manager_id")
     private Manager manager;
 
     @ManyToOne

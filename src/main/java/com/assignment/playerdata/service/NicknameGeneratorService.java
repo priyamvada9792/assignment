@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RequestCallback;
@@ -27,11 +28,16 @@ public class NicknameGeneratorService {
     @Value("${ai.llm.api.url:http://localhost:11434/api/chat}")
     private String llmApiUrl;
 
+    @Value("${ai.llm.model:tinyllama}")
+    private String llmModel;
+    @Value("classpath:Player.csv")
+    private Resource playerCsv;
+
     private final RestTemplate restTemplate = new RestTemplate();
 
     public List<Map<String, String>> generateNicknamesFromCsv() {
         List<Map<String, String>> results = new ArrayList<>();
-        try (InputStream input = new ClassPathResource("Player.csv").getInputStream();
+        try (InputStream input = playerCsv.getInputStream();
              BufferedReader reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8))) {
 
             String line;
@@ -56,9 +62,11 @@ public class NicknameGeneratorService {
     public Map<String, String> generateNickname(String country) {
         String systemPrompt = "You are an AI that generates fun and culturally inspired player nicknames.";
         String userPrompt = "Generate a unique nickname for a sports player from " + country + ".";
+       // String systemPrompt = "You are an AI that returns only short, creative sports nicknames in a single word. Do not add any explanation.";
+       // String userPrompt = String.format("Just return a short nickname for a sports player from %s. One word only.", country);
 
         Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("model", "tinyllama");
+        requestBody.put("model", llmModel);
         requestBody.put("messages", List.of(
                 Map.of("role", "system", "content", systemPrompt),
                 Map.of("role", "user", "content", userPrompt)
