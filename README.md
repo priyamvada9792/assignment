@@ -129,9 +129,50 @@ mvn spring-boot:run
 ```
 
 ### 🧪 Run Tests:
+
 ```bash
 mvn test
-```
+````
+
+Tests include:
+
+Unit tests for services and utilities
+
+Integration tests for all REST endpoints using MockMvc
+
+Edge case validation for bad input, missing params, malformed data
+
+---
+## 📐 Design Choices
+
+1. ⚙️ Tech Stack
+
+Spring Boot 3.4.4 for service framework
+
+H2 in-memory DB for portability and ease of setup
+
+Lombok to reduce boilerplate
+
+Ollama + TinyLlama for local LLM nickname generation
+
+MockMvc + JUnit 5 for integration and unit tests
+
+2. 🗄️ Database Selection
+
+Used H2 in-memory database for simplicity, fast startup, and developer-friendliness
+
+Ideal for small projects, self-contained services, and testing
+
+Easily swappable to Postgres or MySQL via application.properties
+
+3. 🧠 LLM Nickname Generation
+
+Uses OpenAI-style chat format with system & user prompts
+
+Streams responses token-by-token for flexibility.
+
+Graceful fallback when model is unavailable or slow.
+
 
 ---
 ## 🗃 Access the H2 Console (for debugging DB)
@@ -148,6 +189,78 @@ Password: (leave blank)
 
 If you see Database "mem:testdb" not found, ensure you first hit any /v1/players endpoint to trigger schema creation, or seed data using data.sql.
 
+---
+## 📉 Database Design
+
+### 📊 Entity Relationship Diagram
+
+```
++------------------+          +-------------------+          +------------------+
+|     managers     |●o————————+  players          |●o——-——►|      teams        |
+|------------------|          |-------------------|          |------------------|
+| id (PK)          |          | id (PK)           |          | id (PK)          |
+| name             |          | first_name        |          | name             |
++------------------+          | last_name         |          +------------------+
+                              | birth_date        |
+                              | manager_id (FK)   |
+                              | team_id (FK)      |
+                              +-------------------+
+                                       │
+                                       ▼
+        +------------------+   +-------------------+   +-------------------+
+        |  batting_stat    |   |  pitching_stat    |   |  fielding_stat    |
+        |------------------|   |-------------------|   |-------------------|
+        | id (PK)          |   | id (PK)           |   | id (PK)           |
+        | player_id (FK)   |   | player_id (FK)    |   | player_id (FK)    |
+        | stat_name        |   | stat_name         |   | stat_name         |
+        | value            |   | value             |   | value             |
+        +------------------+   +-------------------+   +-------------------+
+```
+
+### 🔗 Relationships
+- One `Manager` ➔ Many `Players`
+- One `Team` ➔ Many `Players`
+- One `Player` ➔ Many `Stats` (batting, pitching, fielding)
+
+---
+## 🤔 Assumptions Made
+
+- isAdmin flag is required or defaults to false if not provided
+
+- LLM nickname generation may be non-deterministic (depends on model)
+
+- Player data can be seeded via data.sql or Player.csv
+
+- Only basic fields are required for Player; stats are optional
+
+---
+
+## 🧪 Testing Strategy
+
+✅ Unit Tests
+
+Pure logic tests for PlayerService, NicknameGeneratorService
+
+Edge handling: null input, empty result, CSV parsing errors
+
+✅ Integration Tests
+
+Use @SpringBootTest + @AutoConfigureMockMvc
+
+Verify endpoint behavior, status codes, and JSON responses
+
+Covers /v1/players, /v1/players/{id}, /v1/nickname, and /v1/nickname/from-csv
+
+✅ Edge Cases
+
+Missing/invalid query params (e.g., isAdmin, country, ID type mismatch)
+
+Empty or malformed input data
+
+LLM API failure handling (simulate unavailability)
+
+Special character encoding and response validation
+
 
 ---
 ## 🔮 Future Enhancements
@@ -158,7 +271,5 @@ If you see Database "mem:testdb" not found, ensure you first hit any /v1/players
 
 ---
 
-## Credits
-- [TinyLlama Model](https://huggingface.co/cerebras/TinyLlama-1.1B-Chat-v1.0)
-- [Ollama](https://ollama.com) — Local LLM serving
+
 
